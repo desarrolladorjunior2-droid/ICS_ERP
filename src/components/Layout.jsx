@@ -4,30 +4,13 @@ import { LogOut, Moon, Sun, RotateCcw, ArrowLeft } from 'lucide-react';
 import ModuleWheel from './ModuleWheel';
 import EmpresaSwitcher from './EmpresaSwitcher';
 import GlobalSearch from './GlobalSearch';
+import NetworkBackground from './NetworkBackground';
 import { useAuth } from '../auth/AuthContext';
 import { MODULES } from '../config/modules';
 import { BRAND } from '../config/brand';
 import { db } from '../data/db';
+import { useTheme } from '../hooks/useTheme';
 import { IconButton, useUi } from './ui';
-
-function useTheme() {
-  const [theme, setTheme] = useState(() => {
-    try {
-      return localStorage.getItem('ics-theme') || 'dark';
-    } catch {
-      return 'dark';
-    }
-  });
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem('ics-theme', theme);
-    } catch {
-      /* noop */
-    }
-  }, [theme]);
-  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))];
-}
 
 export default function Layout() {
   const { user, role, isAdmin, logout, empresa } = useAuth();
@@ -71,6 +54,7 @@ export default function Layout() {
 
   return (
     <div className="app" style={{ '--empresa': empresa?.color || 'var(--brand-primary)' }}>
+      <NetworkBackground variant="app" />
       {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
       <ModuleWheel onSearch={() => setSearchOpen(true)} searchOpen={searchOpen} />
       <div className="main">

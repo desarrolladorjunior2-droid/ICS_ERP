@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, User, KeyRound, ShieldCheck, Workflow, BarChart3 } from 'lucide-react';
+import { ArrowRight, KeyRound, Moon, Sun, User } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { Logo } from '../components/Logo';
+import { LogoMark } from '../components/Logo';
+import NetworkBackground from '../components/NetworkBackground';
 import { BRAND } from '../config/brand';
+import { useTheme } from '../hooks/useTheme';
+
+// Palabras que rotan bajo el nombre: lo que el sistema hace.
+const WORDS = ['Compras', 'Inventario', 'Firmas', 'Actividades', 'Auditoría', 'Multiempresa'];
 
 export default function Login() {
   const { login } = useAuth();
@@ -11,6 +16,13 @@ export default function Login() {
   const [usuario, setUsuario] = useState('');
   const [clave, setClave] = useState('');
   const [error, setError] = useState('');
+  const [w, setW] = useState(0);
+  const [theme, toggleTheme] = useTheme();
+
+  useEffect(() => {
+    const id = setInterval(() => setW((i) => (i + 1) % WORDS.length), 2400);
+    return () => clearInterval(id);
+  }, []);
 
   const submit = (e) => {
     e.preventDefault();
@@ -26,71 +38,83 @@ export default function Login() {
   };
 
   return (
-    <div className="login">
-      <div className="login-bg" aria-hidden>
-        <div className="orb orb-a" />
-        <div className="orb orb-b" />
-        <div className="grid-floor" />
-      </div>
+    <div className="lg">
+      <NetworkBackground />
+      <button
+        type="button"
+        className="lg-theme"
+        onClick={toggleTheme}
+        aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+        title={theme === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+      >
+        {theme === 'dark' ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
+      </button>
+      <div className="lg-vignette" aria-hidden />
 
-      <section className="login-hero">
-        <Logo size={64} />
-        <h1>
-          La nube que convierte <span className="grad-text">datos en decisiones</span>.
+      <main className="lg-main">
+        <div className="lg-logo">
+          <span className="lg-ring r1" aria-hidden />
+          <span className="lg-ring r2" aria-hidden />
+          <span className="lg-ring r3" aria-hidden />
+          <LogoMark size={112} />
+        </div>
+
+        <h1 className="lg-title">
+          Insight <b>Cloud</b> Solution
         </h1>
-        <p className="muted">
-          ERP de {BRAND.company} · {BRAND.companyName}. Compras, firmas, actividades y terceros orquestados por flujos de trabajo.
+        <p className="lg-sub">
+          {BRAND.company} · {BRAND.companyName}
         </p>
-        <ul className="login-feats">
-          <li>
-            <Workflow size={16} /> Workflow con aprobaciones y trazabilidad
-          </li>
-          <li>
-            <BarChart3 size={16} /> Dashboards e indicadores en tiempo real
-          </li>
-          <li>
-            <ShieldCheck size={16} /> Roles y permisos CRUD por módulo
-          </li>
-        </ul>
-      </section>
 
-      <form className="login-card" onSubmit={submit}>
-        <h2>Iniciar sesión</h2>
-        <p className="muted small">Acceda con sus credenciales corporativas</p>
-        <label className="input-icon">
-          <User size={16} aria-hidden />
-          <input placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" aria-label="Usuario" />
-        </label>
-        <label className="input-icon">
-          <KeyRound size={16} aria-hidden />
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={clave}
-            onChange={(e) => setClave(e.target.value)}
-            autoComplete="current-password"
-            aria-label="Contraseña"
-          />
-        </label>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        <button className="btn btn-primary btn-block" type="submit">
-          <LogIn size={16} /> <span>Ingresar</span>
-        </button>
-        <button type="button" className="demo-box" onClick={fillDemo}>
-          <strong>Usuario DEMO (administrador)</strong>
-          <span>
-            usuario: <code>admin</code> · contraseña: <code>Ics2026*</code>
+        <p className="lg-tag" aria-live="polite">
+          <span>Un solo sistema para</span>
+          <span className="lg-word" key={w}>
+            {WORDS[w]}
           </span>
-          <small className="muted">Clic para autocompletar</small>
-        </button>
-        <p className="muted small center">
-          {BRAND.product} v{BRAND.version}
         </p>
-      </form>
+
+        <form className="lg-form" onSubmit={submit}>
+          <label className="lg-field">
+            <User size={17} aria-hidden />
+            <input
+              placeholder="Usuario"
+              value={usuario}
+              onChange={(e) => setUsuario(e.target.value)}
+              autoComplete="username"
+              aria-label="Usuario"
+              autoFocus
+            />
+          </label>
+          <label className="lg-field">
+            <KeyRound size={17} aria-hidden />
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={clave}
+              onChange={(e) => setClave(e.target.value)}
+              autoComplete="current-password"
+              aria-label="Contraseña"
+            />
+          </label>
+          {error && (
+            <p className="lg-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="lg-btn" type="submit">
+            <span>Ingresar</span>
+            <ArrowRight size={18} aria-hidden />
+          </button>
+        </form>
+
+        <button type="button" className="lg-demo" onClick={fillDemo}>
+          Cuenta DEMO · <code>admin</code> / <code>Ics2026*</code> <span>autocompletar</span>
+        </button>
+      </main>
+
+      <footer className="lg-foot">
+        {BRAND.product} · v{BRAND.version}
+      </footer>
     </div>
   );
 }

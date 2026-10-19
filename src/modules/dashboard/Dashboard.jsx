@@ -1,8 +1,9 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import DashboardTablas from './DashboardTablas';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, AreaChart, Area, LabelList,
 } from 'recharts';
-import { LayoutDashboard, ShoppingCart, PenTool, ListChecks, Users2, Workflow, TrendingUp, Filter, ChevronDown, Warehouse, ScrollText } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, PenTool, ListChecks, Users2, Workflow, TrendingUp, Filter, ChevronDown, Warehouse, ScrollText, BarChart3, Table2 } from 'lucide-react';
 import { useDb } from '../../data/db';
 import { useAuth } from '../../auth/AuthContext';
 import { DASHBOARDS } from '../../config/modules';
@@ -573,6 +574,30 @@ const WIDGETS = {
 };
 
 const viewKey = (userId) => `ics-dashboard-${userId}`;
+const modeKey = (userId) => `ics-dashboard-modo-${userId}`;
+
+/** Doble vista: "graficos" o "tabla". Se recuerda por usuario y también viaja en la URL (?modo=). */
+function useDashboardMode(userId) {
+  const [params, setParams] = useSearchParams();
+  let stored = null;
+  try {
+    stored = localStorage.getItem(modeKey(userId));
+  } catch {
+    /* sin almacenamiento */
+  }
+  const modo = [params.get('modo'), stored].find((m) => m === 'graficos' || m === 'tabla') || 'graficos';
+  const setModo = (m) => {
+    try {
+      localStorage.setItem(modeKey(userId), m);
+    } catch {
+      /* noop */
+    }
+    const next = new URLSearchParams(params);
+    next.set('modo', m);
+    setParams(next, { replace: true });
+  };
+  return [modo, setModo];
+}
 
 /** Vista seleccionada: ?vista= en la URL, luego la última elegida, luego la primera asignada. */
 function useSelectedDashboard(userId, available) {
@@ -592,7 +617,9 @@ function useSelectedDashboard(userId, available) {
     } catch {
       /* noop */
     }
-    setParams({ vista: key }, { replace: true });
+    const next = new URLSearchParams(params);
+    next.set('vista', key);
+    setParams(next, { replace: true });
   };
   return [selected, select];
 }
@@ -604,6 +631,7 @@ export default function Dashboard() {
   const ordered = DASHBOARDS.filter((d) => dashboards.includes(d.key));
   const [selected, select] = useSelectedDashboard(user.id, ordered);
   const Widget = WIDGETS[selected];
+  const [modo, setModo] = useDashboardMode(user.id);
 
   return (
     <div className="page">
@@ -621,6 +649,15 @@ export default function Dashboard() {
           </p>
         </div>
         {ordered.length > 0 && (
+          <div className="dash-tools">
+            <div className="seg" role="group" aria-label="Tipo de vista">
+              <button className={modo === 'graficos' ? 'active' : ''} onClick={() => setModo('graficos')} title="Vista de gráficos">
+                <BarChart3 size={16} /> Gráficos
+              </button>
+              <button className={modo === 'tabla' ? 'active' : ''} onClick={() => setModo('tabla')} title="Vista de tablas">
+                <Table2 size={16} /> Tabla
+              </button>
+            </div>
           <label className="dash-filter">
             <Filter size={16} aria-hidden />
             <span className="dash-filter-label">Dashboard</span>
@@ -633,13 +670,14 @@ export default function Dashboard() {
             </select>
             <ChevronDown size={16} aria-hidden className="dash-filter-caret" />
           </label>
+          </div>
         )}
       </header>
       {ordered.length === 0 ? (
         <Empty title="Sin dashboards asignados">Solicite al administrador la parametrización de sus dashboards.</Empty>
       ) : (
         <>
-          <Widget key={selected} />
+          {modo === 'tabla' ? <DashboardTablas key={`t-${selected}`} view={selected} /> : <Widget key={selected} />}
           <FlujoSection key={`flujo-${selected}`} module={selected === 'resumen' ? undefined : selected} />
         </>
       )}
