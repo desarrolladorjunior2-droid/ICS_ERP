@@ -1,0 +1,99 @@
+/* =========================================================
+   Tokens de diseño · Insight Cloud Solution
+   Paleta de marca extraída del logo de ICS:
+   azul real #1A5BE6 → cian #22C8F0, sombra #0B2E9E, marino #0E1A3A
+   ========================================================= */
+:root {
+  /* Marca */
+  --brand-primary: #22c8f0;
+  --brand-secondary: #1a5be6;
+  --brand-deep: #0b2e9e;
+  --brand-navy: #0e1a3a;
+  --brand-gradient: linear-gradient(120deg, #1a5be6 0%, #1f8fec 55%, #22c8f0 100%);
+
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Orbitron', 'Inter', system-ui, sans-serif;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --wheel-w: 150px;
+
+  /* Estados (reservados: nunca se usan como serie de gráfico) */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+}
+
+/* ---------- Tema oscuro (por defecto) ---------- */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #060c1d;
+  --bg-glow-a: rgba(26, 91, 230, 0.22);
+  --bg-glow-b: rgba(34, 200, 240, 0.12);
+  --surface: #0f1a33;
+  --surface-2: #142243;
+  --surface-glass: rgba(16, 27, 54, 0.72);
+  --border: rgba(120, 170, 255, 0.14);
+  --border-strong: rgba(34, 200, 240, 0.45);
+  --text: #e8eefb;
+  --text-2: #b4c1de;
+  --muted: #8494b8;
+  --grid: #1d2a4a;
+  --axis: #2c3c63;
+  --hover: rgba(34, 200, 240, 0.08);
+  --input: #0b1429;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  --glow: 0 0 0 1px rgba(34, 200, 240, 0.35), 0 0 24px rgba(34, 200, 240, 0.25);
+
+  /* Series de gráficos: paleta categórica validada (CVD) para fondo oscuro */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+
+  /* Tonos de insignias de estado */
+  --tone-neutral: #8fa3cc;
+  --tone-info: #22c8f0;
+  --tone-accent: #6f9bff;
+  --tone-good: #2fcf6f;
+  --tone-critical: #ff6b6b;
+  --tone-muted: #6b7a99;
+  --tone-done: #58e0c0;
+}
+
+/* ---------- Tema claro ---------- */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eef3fb;
+  --bg-glow-a: rgba(26, 91, 230, 0.1);
+  --bg-glow-b: rgba(34, 200, 240, 0.1);
+  --surface: #ffffff;
+  --surface-2: #f3f7fe;
+  --surface-glass: rgba(255, 255, 255, 0.82);
+  --border: rgba(14, 26, 58, 0.1);
+  --border-strong: rgba(26, 91, 230, 0.45);
+  --text: #0e1a3a;
+  --text-2: #3b4a6e;
+  --muted: #66749a;
+  --grid: #e3e9f4;
+  --axis: #c3cde0;
+  --hover: rgba(26, 91, 230, 0.06);
+  --input: #f7f9fd;
+  --shadow: 0 10px 30px rgba(14, 26, 58, 0.08);
+  --glow: 0 0 0 1px rgba(26, 91, 230, 0.35), 0 0 18px rgba(26, 91, 230, 0.15);
+
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+
+  --tone-neutral: #5a6b91;
+  --tone-info: #0c85b8;
+  --tone-accent: #1a5be6;
+  --tone-good: #13863f;
+  --tone-critical: #c62f2f;
+  --tone-muted: #7c87a0;
+  --tone-done: #0f8a72;
+}
