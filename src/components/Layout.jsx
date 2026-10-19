@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, Moon, Sun, RotateCcw, ArrowLeft } from 'lucide-react';
 import ModuleWheel from './ModuleWheel';
 import EmpresaSwitcher from './EmpresaSwitcher';
+import GlobalSearch from './GlobalSearch';
 import { useAuth } from '../auth/AuthContext';
 import { MODULES } from '../config/modules';
 import { BRAND } from '../config/brand';
@@ -28,33 +29,29 @@ function useTheme() {
   return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))];
 }
 
-function useCollapsed() {
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('ics-menu') === 'collapsed';
-    } catch {
-      return false;
-    }
-  });
-  const toggle = () =>
-    setCollapsed((c) => {
-      try {
-        localStorage.setItem('ics-menu', c ? 'open' : 'collapsed');
-      } catch {
-        /* noop */
-      }
-      return !c;
-    });
-  return [collapsed, toggle];
-}
-
 export default function Layout() {
   const { user, role, isAdmin, logout, empresa } = useAuth();
   const { confirm, toast } = useUi();
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const [theme, toggleTheme] = useTheme();
-  const [collapsed, toggleMenu] = useCollapsed();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Atajos del buscador: Ctrl/Cmd + K, o "/" cuando no se está escribiendo en un campo.
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen((o) => !o);
+      } else if (e.key === '/' && !typing) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const canGoBack = (window.history.state?.idx ?? 0) > 0;
   const inRecord = new URLSearchParams(search).has('id');
   const current = MODULES.find((m) => pathname.startsWith(m.path));
@@ -73,8 +70,9 @@ export default function Layout() {
   };
 
   return (
-    <div className={`app ${collapsed ? 'menu-collapsed' : ''}`} style={{ '--empresa': empresa?.color || 'var(--brand-primary)' }}>
-      <ModuleWheel collapsed={collapsed} onToggle={toggleMenu} />
+    <div className="app" style={{ '--empresa': empresa?.color || 'var(--brand-primary)' }}>
+      {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
+      <ModuleWheel onSearch={() => setSearchOpen(true)} searchOpen={searchOpen} />
       <div className="main">
         <header className="topbar">
           <div className="crumbs">
