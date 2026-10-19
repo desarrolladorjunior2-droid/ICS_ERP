@@ -598,7 +598,7 @@ function useSelectedDashboard(userId, available) {
 }
 
 export default function Dashboard() {
-  const { user, dashboards, isAdmin } = useAuth();
+  const { user, dashboards, isAdmin, empresa } = useAuth();
   const hour = new Date().getHours();
   const saludo = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
   const ordered = DASHBOARDS.filter((d) => dashboards.includes(d.key));
@@ -611,6 +611,7 @@ export default function Dashboard() {
         <div>
           <p className="eyebrow">
             {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {empresa && ` · ${empresa.nombre}`}
           </p>
           <h1>
             {saludo}, <span className="grad-text">{user.nombre.split(' ')[0]}</span>

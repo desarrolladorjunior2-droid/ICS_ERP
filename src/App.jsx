@@ -11,6 +11,7 @@ import Actividades from './modules/actividades/Actividades';
 import Terceros from './modules/terceros/Terceros';
 import Inventario from './modules/inventario/Inventario';
 import Auditorias from './modules/auditorias/Auditorias';
+import Empresas from './modules/empresas/Empresas';
 import Usuarios from './modules/seguridad/Usuarios';
 import Roles from './modules/seguridad/Roles';
 
@@ -22,6 +23,7 @@ const PAGES = {
   terceros: Terceros,
   inventario: Inventario,
   auditorias: Auditorias,
+  empresas: Empresas,
   usuarios: Usuarios,
   roles: Roles,
 };

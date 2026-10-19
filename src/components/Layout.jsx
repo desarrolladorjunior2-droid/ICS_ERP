@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, Moon, Sun, RotateCcw, ArrowLeft } from 'lucide-react';
 import ModuleWheel from './ModuleWheel';
+import EmpresaSwitcher from './EmpresaSwitcher';
 import { useAuth } from '../auth/AuthContext';
 import { MODULES } from '../config/modules';
 import { BRAND } from '../config/brand';
@@ -48,7 +49,7 @@ function useCollapsed() {
 }
 
 export default function Layout() {
-  const { user, role, isAdmin, logout } = useAuth();
+  const { user, role, isAdmin, logout, empresa } = useAuth();
   const { confirm, toast } = useUi();
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
@@ -72,7 +73,7 @@ export default function Layout() {
   };
 
   return (
-    <div className={`app ${collapsed ? 'menu-collapsed' : ''}`}>
+    <div className={`app ${collapsed ? 'menu-collapsed' : ''}`} style={{ '--empresa': empresa?.color || 'var(--brand-primary)' }}>
       <ModuleWheel collapsed={collapsed} onToggle={toggleMenu} />
       <div className="main">
         <header className="topbar">
@@ -80,6 +81,7 @@ export default function Layout() {
             <button className="back-btn" onClick={() => navigate(-1)} disabled={!canGoBack} aria-label="Ir atrás" title="Ir atrás">
               <ArrowLeft size={16} /> <span>Atrás</span>
             </button>
+            <EmpresaSwitcher />
             <span className="brand-name">{BRAND.product}</span>
             <span className="sep">/</span>
             {inRecord && current ? (

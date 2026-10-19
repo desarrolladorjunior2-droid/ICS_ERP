@@ -13,6 +13,7 @@ export const ACCIONES = {
   LOGIN: { label: 'Ingreso', tone: 'neutral' },
   LOGOUT: { label: 'Salida', tone: 'muted' },
   LOGIN_FALLIDO: { label: 'Ingreso fallido', tone: 'critical' },
+  CAMBIO_EMPRESA: { label: 'Cambio de empresa', tone: 'neutral' },
 };
 
 export const moduloLabel = (key) =>

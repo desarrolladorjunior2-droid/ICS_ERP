@@ -6,6 +6,7 @@ import {
   Users2,
   Warehouse,
   ScrollText,
+  Building2,
   UserCog,
   ShieldCheck,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ export const MODULES = [
   { key: 'actividades', label: 'Actividades', path: '/actividades', icon: ListChecks, group: 'Gestión' },
   { key: 'terceros', label: 'Terceros', path: '/terceros', icon: Users2, group: 'Gestión' },
   { key: 'auditorias', label: 'Auditoría', path: '/auditorias', icon: ScrollText, group: 'Seguridad' },
+  { key: 'empresas', label: 'Empresas', path: '/empresas', icon: Building2, group: 'Seguridad' },
   { key: 'usuarios', label: 'Usuarios', path: '/usuarios', icon: UserCog, group: 'Seguridad' },
   { key: 'roles', label: 'Roles y permisos', short: 'Roles', path: '/roles', icon: ShieldCheck, group: 'Seguridad' },
 ];

@@ -3,6 +3,9 @@
 // El mismo modelo está expresado en SQL (PostgreSQL) en /db/schema.sql.
 
 export const SCHEMA = {
+  // ---- Multiempresa ----
+  empresas: { prefix: 'EMP' },
+
   // ---- Seguridad ----
   roles: { prefix: 'ROL' },
   usuarios: { prefix: 'USR' },
@@ -73,3 +76,20 @@ export const SCHEMA = {
 };
 
 export const TABLES = Object.keys(SCHEMA);
+
+/**
+ * Tablas cuyos registros pertenecen a una empresa (columna empresa_id).
+ * El repositorio las filtra automáticamente por la empresa activa de la sesión.
+ * Usuarios, roles y empresas son globales.
+ */
+export const SCOPED_TABLES = new Set([
+  'terceros', 'terceros_contactos', 'terceros_direcciones', 'terceros_cuentas',
+  'compras', 'compras_items', 'compras_entregas',
+  'firmas', 'firmas_firmantes', 'firmas_adjuntos',
+  'actividades', 'actividades_tareas', 'actividades_tiempos',
+  'articulos', 'inventario', 'inventario_lineas',
+  'auditoria_logs', 'workflow_historial',
+]);
+
+/** Tablas globales: sus cambios se registran en la auditoría como eventos de todo el grupo. */
+export const GLOBAL_TABLES = new Set(['usuarios', 'roles', 'empresas']);

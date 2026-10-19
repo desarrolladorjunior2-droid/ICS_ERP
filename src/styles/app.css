@@ -2094,3 +2094,184 @@ p {
 .nowrap {
   white-space: nowrap;
 }
+
+/* ---------- Multiempresa ---------- */
+.topbar {
+  border-bottom-color: color-mix(in srgb, var(--empresa, var(--brand-primary)) 45%, var(--border));
+  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--empresa, var(--brand-primary)) 22%, transparent);
+}
+.empresa-chip {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #06101f;
+  background: var(--c);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.empresa-switch {
+  position: relative;
+  margin-right: 4px;
+}
+.empresa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+  padding: 0 10px 0 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 650;
+  max-width: 260px;
+}
+.empresa-btn:not(.static):hover {
+  border-color: var(--border-strong);
+}
+.empresa-btn.static {
+  cursor: default;
+  padding-right: 12px;
+}
+.empresa-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empresa-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: 340px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow), var(--glow);
+  animation: rise 0.18s ease;
+}
+.empresa-menu-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.empresa-menu > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  text-align: left;
+}
+.empresa-menu > button:hover {
+  background: var(--hover);
+}
+.empresa-menu > button.active {
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+}
+.empresa-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.empresa-info small {
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empresa-admin {
+  margin-top: 4px;
+  border-top: 1px solid var(--border) !important;
+  border-radius: 0 0 10px 10px !important;
+  color: var(--brand-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.empresa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+.empresa-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.empresa-card.activa {
+  border-color: color-mix(in srgb, var(--c) 60%, transparent);
+  box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent);
+}
+.empresa-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.empresa-card-head .grow strong {
+  display: block;
+  font-size: 15px;
+}
+.empresa-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.empresa-stats div {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.empresa-stats b {
+  font-size: 18px;
+}
+.empresa-stats span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.empresa-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.empresa-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .empresa-name {
+    display: none;
+  }
+  .empresa-btn {
+    padding-right: 6px;
+  }
+  .empresa-btn.static {
+    padding-right: 4px;
+  }
+  .empresa-menu {
+    position: fixed;
+    top: 56px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}

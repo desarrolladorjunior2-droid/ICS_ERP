@@ -19,9 +19,9 @@ export function IconButton({ icon: Icon, label, className = '', ...props }) {
   );
 }
 
-export function Card({ title, actions, children, className = '', subtitle }) {
+export function Card({ title, actions, children, className = '', subtitle, style }) {
   return (
-    <section className={`card ${className}`}>
+    <section className={`card ${className}`} style={style}>
       {(title || actions) && (
         <header className="card-head">
           <div>

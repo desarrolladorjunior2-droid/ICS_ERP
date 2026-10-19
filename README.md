@@ -12,6 +12,7 @@ ERP de **ICS – Innovation Code Services**, construido en React + Vite y listo 
 | Terceros | Tercero | Contactos, Direcciones, Cuentas bancarias | Prospecto → En validación → Activo (+ Inactivo / Bloqueado) |
 | Inventario | Movimiento (y catálogo de artículos) | Líneas por artículo | Borrador → Confirmado (+ Anulado) |
 | Auditoría | Evento (log) | Cambios campo a campo (anterior → nuevo) | — (solo lectura, inmutable) |
+| Empresas | Empresa | — (vista consolidada del grupo) | — |
 | Usuarios / Roles | Usuario, Rol | Dashboards por usuario; matriz CRUD + Aprobar por módulo | — |
 
 **El workflow no es un módulo: es la metodología de trabajo de todos los módulos.** Cada módulo de gestión incluye:
@@ -24,6 +25,15 @@ ERP de **ICS – Innovation Code Services**, construido en React + Vite y listo 
 **Compras ⇄ Inventario.** Los ítems de una orden de compra pueden ligarse a un artículo del inventario. Al ejecutar *Registrar recepción*, el sistema genera automáticamente un movimiento de **Entrada por compra** en borrador con las cantidades y costos de la orden; el almacén lo confirma (ahí se actualizan las existencias y el último costo del artículo). Las salidas no pueden dejar el stock en negativo, y la orden muestra el estado de su ingreso (*Al recibir la orden / Pendiente / Ingresado*).
 
 **Auditoría (logs).** Toda creación, edición, eliminación y cambio de estado, además de inicios y cierres de sesión (incluidos los intentos fallidos), queda registrada automáticamente con usuario, rol, fecha y los valores anterior y nuevo de cada campo. El módulo es de solo lectura, permite filtrar por usuario, módulo, acción y fechas, y exportar a CSV. Las contraseñas nunca se guardan en el log. En el DEMO se conservan los últimos 1.500 eventos.
+
+**Multiempresa.** El sistema administra varias empresas del grupo en una misma instalación:
+
+- Cada empresa tiene sus propios terceros, compras, firmas, actividades, inventario y auditoría, con **numeración independiente** (cada una arranca en OC-0001, TER-0001…). Usuarios, roles y empresas son globales.
+- Cada usuario tiene **empresas con acceso** y una **predeterminada** (*Usuarios → Editar*); el administrador accede a todas. Al ingresar entra a su empresa predeterminada y puede cambiar de empresa desde el selector de la barra superior; todos los módulos y dashboards se recargan con los datos de la empresa elegida. Un usuario sin empresas asignadas no puede ingresar.
+- El módulo **Empresas** (alta, edición, inactivación, color distintivo) incluye una vista consolidada del grupo con indicadores por empresa. No se puede eliminar una empresa que ya tiene registros: se inactiva.
+- El aislamiento lo aplica la capa de datos (`src/data/db.js`): toda lectura se filtra por la empresa activa y todo registro nuevo se sella con ella, de modo que ninguna pantalla puede mezclar datos de empresas distintas ni abrir un registro de otra empresa por URL. En producción se refuerza en la base de datos con *Row Level Security* (ver `db/schema.sql`).
+- La auditoría registra los eventos de cada empresa en su propio historial; las sesiones, cambios de empresa y gestión de usuarios/roles son eventos globales del grupo.
+- Demo: **ICS Matriz** (con todos los datos), **ICS Cloud** e **ICS Andina**. `admin` y `crojas` acceden a las tres; `lgomez` y `rvargas` a Matriz y Cloud; `amejia` solo a Matriz.
 
 - **Navegación en rueda** a la izquierda: gira con la rueda del ratón, las flechas o el teclado (↑ ↓); en móvil se convierte en una barra inferior.
 - **Primera vista = dashboard parametrizado** del usuario (en *Usuarios → Dashboards de inicio*). El rol Administrador ve todos.

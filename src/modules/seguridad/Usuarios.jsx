@@ -11,6 +11,7 @@ export default function Usuarios() {
   const { toast, confirm } = useUi();
   const usuarios = useDb((d) => d.list('usuarios'));
   const roles = useDb((d) => d.list('roles'));
+  const empresas = useDb((d) => d.listAll('empresas'));
   const [form, setForm] = useState(null); // { row }
   const [q, setQ] = useState('');
 
@@ -24,6 +25,21 @@ export default function Usuarios() {
       { key: 'cargo', label: 'Cargo' },
       { key: 'rol_id', label: 'Rol', type: 'select', options: roles.map((r) => ({ value: r.id, label: r.nombre })), required: true },
       { key: 'clave', label: 'Contraseña', type: 'password', required: !form?.row, span: 1 },
+      {
+        key: 'empresas_ids',
+        label: 'Empresas con acceso (el administrador accede a todas)',
+        type: 'multicheck',
+        span: 3,
+        options: empresas.map((e) => ({ value: e.id, label: e.alias || e.nombre })),
+        default: [],
+      },
+      {
+        key: 'empresa_id',
+        label: 'Empresa predeterminada',
+        type: 'select',
+        options: empresas.map((e) => ({ value: e.id, label: e.alias || e.nombre })),
+        span: 2,
+      },
       { key: 'activo', label: 'Estado', type: 'checkbox', checkLabel: 'Usuario activo', default: true },
       {
         key: 'dashboards',
@@ -34,7 +50,7 @@ export default function Usuarios() {
         default: ['resumen'],
       },
     ],
-    [roles, form],
+    [roles, empresas, form],
   );
 
   const rows = usuarios.filter((u) => `${u.nombre} ${u.usuario} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
@@ -43,6 +59,11 @@ export default function Usuarios() {
     const dup = usuarios.find((u) => u.usuario.toLowerCase() === data.usuario.toLowerCase() && u.id !== form.row?.id);
     if (dup) return toast('El nombre de usuario ya existe.', 'critical');
     const payload = { ...data };
+    // Multiempresa: la predeterminada siempre debe estar entre las permitidas.
+    const ids = payload.empresas_ids || [];
+    if (payload.rol_id !== 'rol-admin' && !ids.length) return toast('Seleccione al menos una empresa con acceso.', 'critical');
+    if (ids.length && !ids.includes(payload.empresa_id)) payload.empresa_id = ids[0];
+    if (!ids.length && !payload.empresa_id) payload.empresa_id = empresas[0]?.id || '';
     if (form.row && !payload.clave) delete payload.clave; // conservar contraseña actual
     if (form.row) db.update('usuarios', form.row.id, payload);
     else db.insert('usuarios', payload);
@@ -95,6 +116,13 @@ export default function Usuarios() {
             { key: 'usuario', label: 'Usuario' },
             { key: 'email', label: 'Correo' },
             { key: 'rol_id', label: 'Rol', render: (u) => <Tag tone="accent">{roleName(u.rol_id)}</Tag>, sortValue: (u) => roleName(u.rol_id) },
+            {
+              key: 'empresas_ids', label: 'Empresas',
+              render: (u) =>
+                u.rol_id === 'rol-admin'
+                  ? 'Todas'
+                  : (u.empresas_ids || []).map((id) => empresas.find((e) => e.id === id)?.alias).filter(Boolean).join(', ') || '—',
+            },
             { key: 'dashboards', label: 'Dashboards', render: (u) => (u.rol_id === 'rol-admin' ? 'Todos' : (u.dashboards || []).length) },
             { key: 'activo', label: 'Estado', render: (u) => (u.activo ? <Tag tone="good">Activo</Tag> : <Tag tone="muted">Inactivo</Tag>) },
           ]}

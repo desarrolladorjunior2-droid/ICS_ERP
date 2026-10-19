@@ -6,14 +6,24 @@
 // AUDITORÍA: toda creación, edición y eliminación pasa por aquí y queda registrada
 // automáticamente en `auditoria_logs` (evento) + `auditoria_logs_cambios` (campo a campo).
 import { useEffect, useState, useCallback } from 'react';
-import { SCHEMA, TABLES } from './schema';
+import { SCHEMA, TABLES, SCOPED_TABLES, GLOBAL_TABLES } from './schema';
 import { WORKFLOWS } from '../workflow/definitions';
-import { buildSeed } from './seed';
+import { buildSeed, EMPRESA_PRINCIPAL } from './seed';
 
 const STORAGE_KEY = 'ics-erp-db-v1';
 const MAX_LOGS = 1500; // el DEMO conserva los eventos más recientes
 const listeners = new Set();
+// MULTIEMPRESA: empresa activa de la sesión. Los datos de negocio (SCOPED_TABLES) solo se
+// leen/escriben dentro de ella; el repositorio aplica el filtro para que ninguna pantalla
+// pueda mezclar datos de empresas distintas.
+let activeEmpresa = null;
 let state = load();
+
+const visibleRow = (table, row) => {
+  if (!SCOPED_TABLES.has(table)) return true;
+  if (table === 'auditoria_logs' && !row.empresa_id) return true; // eventos globales (sesiones, usuarios…)
+  return !!activeEmpresa && row.empresa_id === activeEmpresa;
+};
 
 function load() {
   try {
@@ -22,8 +32,24 @@ function load() {
       const parsed = JSON.parse(raw);
       // Migración: tablas y permisos de módulos agregados después de guardar los datos.
       const seed = buildSeed();
+      const existed = new Set(Object.keys(parsed));
       Object.keys(parsed).forEach((k) => !TABLES.includes(k) && delete parsed[k]);
       TABLES.forEach((t) => (parsed[t] ??= seed[t] || []));
+      if (!existed.has('empresas')) {
+        // Los datos existentes pasan a la empresa principal y se agregan las demás empresas de la demo.
+        [...SCOPED_TABLES, 'auditoria_logs_cambios'].forEach((t) => {
+          if (!existed.has(t)) return; // ya viene completa desde la semilla
+          const global = (r) => t === 'auditoria_logs' && (r.modulo === 'sesion' || ['roles', 'usuarios'].includes(r.tabla));
+          parsed[t] = [
+            ...parsed[t].map((r) => ({ ...r, empresa_id: r.empresa_id ?? (global(r) ? '' : EMPRESA_PRINCIPAL) })),
+            ...seed[t].filter((r) => r.empresa_id && r.empresa_id !== EMPRESA_PRINCIPAL),
+          ];
+        });
+        parsed.usuarios = parsed.usuarios.map((u) => {
+          const s = seed.usuarios.find((x) => x.id === u.id);
+          return { empresa_id: s?.empresa_id || EMPRESA_PRINCIPAL, empresas_ids: s?.empresas_ids || [EMPRESA_PRINCIPAL], ...u };
+        });
+      }
       parsed.roles = parsed.roles.map((r) => {
         const base = seed.roles.find((s) => s.id === r.id);
         return base ? { ...r, permisos: { ...base.permisos, ...r.permisos } } : r;
@@ -53,7 +79,7 @@ const now = () => new Date().toISOString();
 function nextCode(table) {
   const prefix = SCHEMA[table]?.prefix;
   if (!prefix) return undefined;
-  const max = state[table].reduce((m, r) => {
+  const max = state[table].filter((r) => visibleRow(table, r)).reduce((m, r) => {
     const n = parseInt(String(r.codigo || '').split('-').pop(), 10);
     return Number.isFinite(n) && n > m ? n : m;
   }, 0);
@@ -62,7 +88,7 @@ function nextCode(table) {
 
 // ======================= AUDITORÍA (LOGS) =======================
 const NO_LOG = new Set(['auditoria_logs', 'auditoria_logs_cambios', 'workflow_historial']);
-const IGNORED_FIELDS = new Set(['id', 'creado', 'actualizado']);
+const IGNORED_FIELDS = new Set(['id', 'creado', 'actualizado', 'empresa_id']);
 const SECRET_FIELDS = new Set(['clave']);
 const MODULE_ALIAS = { articulos: 'inventario' };
 const LABELS = {
@@ -126,7 +152,8 @@ function diff(before, after) {
 function addLog(entry, cambios = []) {
   const who = entry.who || actor;
   const log = {
-    id: uid(), fecha: now(), usuario_id: who.id, usuario: who.nombre, usuario_login: who.usuario, rol: who.rol,
+    id: uid(), empresa_id: entry.global || ['sesion', 'sistema'].includes(entry.modulo) || GLOBAL_TABLES.has(entry.tabla) ? '' : activeEmpresa || '',
+    fecha: now(), usuario_id: who.id, usuario: who.nombre, usuario_login: who.usuario, rol: who.rol,
     accion: entry.accion, modulo: entry.modulo, tabla: entry.tabla || '', registro_id: entry.registro_id || '',
     registro_codigo: entry.registro_codigo || '', descripcion: entry.descripcion, nivel: entry.nivel || 'info',
   };
@@ -143,16 +170,33 @@ function addLog(entry, cambios = []) {
 
 export const db = {
   list(table, filter) {
-    const rows = state[table] || [];
+    const rows = (state[table] || []).filter((r) => visibleRow(table, r));
     return filter ? rows.filter(filter) : rows;
   },
 
+  /** Lectura sin filtro de empresa (solo para vistas consolidadas del grupo). */
+  listAll(table) {
+    return state[table] || [];
+  },
+
   get(table, id) {
-    return (state[table] || []).find((r) => r.id === id) || null;
+    const row = (state[table] || []).find((r) => r.id === id);
+    return row && visibleRow(table, row) ? row : null;
+  },
+
+  /** Cambia la empresa activa; notifica a las pantallas para que recarguen sus datos. */
+  setEmpresa(id, { silent = false } = {}) {
+    activeEmpresa = id || null;
+    if (!silent) listeners.forEach((fn) => fn());
+  },
+
+  empresaActivaId() {
+    return activeEmpresa;
   },
 
   insert(table, data) {
     const row = { id: uid(), creado: now(), actualizado: now(), ...data };
+    if (SCOPED_TABLES.has(table) && row.empresa_id === undefined) row.empresa_id = activeEmpresa;
     if (!row.codigo && SCHEMA[table]?.prefix) row.codigo = nextCode(table);
     state = { ...state, [table]: [...state[table], row] };
     if (!NO_LOG.has(table)) {

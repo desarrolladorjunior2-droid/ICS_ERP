@@ -25,7 +25,7 @@ export const comprasConfig = {
   icon: ShoppingCart,
   searchText: (r) => `${r.codigo} ${terceroName(r.proveedor_id)} ${r.solicitante} ${r.centro_costo}`,
   recordTitle: (r) => `Orden de compra · ${terceroName(r.proveedor_id)}`,
-  defaults: () => ({ fecha: today(), moneda: 'COP', forma_pago: 'Crédito 30 días' }),
+  defaults: () => ({ fecha: today(), moneda: db.get('empresas', db.empresaActivaId())?.moneda || 'COP', forma_pago: 'Crédito 30 días' }),
 
   // ---- Maestro ----
   fields: [

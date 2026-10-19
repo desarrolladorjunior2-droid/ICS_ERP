@@ -11,9 +11,42 @@ let counter = 0;
 const id = (p) => `${p}-${(++counter).toString(36).padStart(5, '0')}`;
 const iso = (y, m, d) => new Date(Date.UTC(y, m, d, 14)).toISOString();
 
+// ---------- Empresas del grupo (multiempresa) ----------
+const E = { ics: 'emp-ics', cloud: 'emp-cloud', andina: 'emp-andina' };
+export const EMPRESA_PRINCIPAL = E.ics;
+const EMPRESAS = [
+  { id: E.ics, codigo: 'EMP-0001', nombre: 'Innovation Code Services S.A.S.', alias: 'ICS Matriz', nit: '901.234.567-1', ciudad: 'Bogotá', moneda: 'COP', color: '#22C8F0', activo: true, creado: iso(2026, 0, 2) },
+  { id: E.cloud, codigo: 'EMP-0002', nombre: 'ICS Soluciones Cloud S.A.S.', alias: 'ICS Cloud', nit: '901.345.678-2', ciudad: 'Medellín', moneda: 'COP', color: '#8B7CFF', activo: true, creado: iso(2026, 0, 3) },
+  { id: E.andina, codigo: 'EMP-0003', nombre: 'ICS Andina S.A.S.', alias: 'ICS Andina', nit: '901.456.789-3', ciudad: 'Cali', moneda: 'COP', color: '#2FCF9B', activo: true, creado: iso(2026, 0, 4) },
+];
+const NOMBRES_CLOUD = [
+  ['CloudNet Colombia S.A.S.', 'Proveedor'], ['Servidores y Redes Ltda.', 'Proveedor'], ['Hardware Total S.A.S.', 'Proveedor'],
+  ['Fintech Aurora', 'Cliente'], ['Retail Central S.A.', 'Cliente'], ['Aliados Digitales', 'Aliado'], ['Universidad Tech del Valle', 'Cliente'],
+];
+const NOMBRES_ANDINA = [
+  ['Distribuidora Andes', 'Proveedor'], ['Suministros del Pacífico', 'Proveedor'], ['Tecnología del Sur', 'Proveedor'],
+  ['Minera Cordillera', 'Cliente'], ['Agroindustrial del Valle', 'Cliente'], ['Alianza Regional', 'Aliado'],
+];
+// La primera empresa conserva exactamente los datos de siempre; las otras son más pequeñas.
+const OPCIONES = [
+  { seed: 20261019, nCompras: 34, nDocs: 10, nActs: 8, primary: true },
+  { seed: 20262027, nCompras: 14, nDocs: 5, nActs: 4, nombres: NOMBRES_CLOUD },
+  { seed: 20263035, nCompras: 10, nDocs: 4, nActs: 3, nombres: NOMBRES_ANDINA },
+];
+
+/** Datos de demostración de TODO el grupo: usuarios/roles globales + datos por empresa. */
 export function buildSeed() {
   counter = 0;
-  const r = rng(20261019);
+  const parts = EMPRESAS.map((e, i) => buildEmpresa(e, OPCIONES[i]));
+  const out = { empresas: EMPRESAS.map((e) => ({ ...e })) };
+  Object.keys(parts[0]).forEach((k) => {
+    out[k] = k === 'roles' || k === 'usuarios' ? parts[0][k] : parts.flatMap((p) => p[k]);
+  });
+  return out;
+}
+
+function buildEmpresa(empresa, opts) {
+  const r = rng(opts.seed);
   const pick = (arr) => arr[Math.floor(r() * arr.length)];
   const int = (a, b) => Math.floor(a + r() * (b - a + 1));
 
@@ -48,27 +81,27 @@ export function buildSeed() {
   const usuarios = [
     {
       id: 'usr-admin', codigo: 'USR-0001', usuario: 'admin', clave: 'Ics2026*', nombre: 'Administrador ICS',
-      email: 'admin@ics.demo', cargo: 'Administrador del sistema', rol_id: 'rol-admin', activo: true,
+      email: 'admin@ics.demo', cargo: 'Administrador del sistema', rol_id: 'rol-admin', activo: true, empresa_id: E.ics, empresas_ids: [E.ics, E.cloud, E.andina],
       dashboards: allDash,
     },
     {
       id: 'usr-compras', codigo: 'USR-0002', usuario: 'lgomez', clave: 'Demo2026*', nombre: 'Laura Gómez',
-      email: 'lgomez@ics.demo', cargo: 'Analista de compras', rol_id: 'rol-compras', activo: true,
+      email: 'lgomez@ics.demo', cargo: 'Analista de compras', rol_id: 'rol-compras', activo: true, empresa_id: E.ics, empresas_ids: [E.ics, E.cloud],
       dashboards: ['compras', 'inventario', 'terceros'],
     },
     {
       id: 'usr-aprob', codigo: 'USR-0003', usuario: 'crojas', clave: 'Demo2026*', nombre: 'Carlos Rojas',
-      email: 'crojas@ics.demo', cargo: 'Gerente financiero', rol_id: 'rol-aprob', activo: true,
+      email: 'crojas@ics.demo', cargo: 'Gerente financiero', rol_id: 'rol-aprob', activo: true, empresa_id: E.ics, empresas_ids: [E.ics, E.cloud, E.andina],
       dashboards: ['resumen', 'compras', 'inventario', 'firmas'],
     },
     {
       id: 'usr-proy', codigo: 'USR-0004', usuario: 'amejia', clave: 'Demo2026*', nombre: 'Andrea Mejía',
-      email: 'amejia@ics.demo', cargo: 'Líder de proyectos', rol_id: 'rol-proy', activo: true,
+      email: 'amejia@ics.demo', cargo: 'Líder de proyectos', rol_id: 'rol-proy', activo: true, empresa_id: E.ics, empresas_ids: [E.ics],
       dashboards: ['actividades'],
     },
     {
       id: 'usr-auditor', codigo: 'USR-0005', usuario: 'rvargas', clave: 'Demo2026*', nombre: 'Rafael Vargas',
-      email: 'rvargas@ics.demo', cargo: 'Auditor interno', rol_id: 'rol-auditor', activo: true,
+      email: 'rvargas@ics.demo', cargo: 'Auditor interno', rol_id: 'rol-auditor', activo: true, empresa_id: E.ics, empresas_ids: [E.ics, E.cloud],
       dashboards: ['auditorias', 'resumen'],
     },
   ];
@@ -86,7 +119,7 @@ export function buildSeed() {
   const terceros_contactos = [];
   const terceros_direcciones = [];
   const terceros_cuentas = [];
-  nombres.forEach(([razon, tipo], i) => {
+  (opts.nombres || nombres).forEach(([razon, tipo], i) => {
     const t = {
       id: id('ter'), codigo: `TER-${String(i + 1).padStart(4, '0')}`, razon_social: razon, tipo,
       tipo_documento: 'NIT', documento: `${int(800, 901)}.${int(100, 999)}.${int(100, 999)}-${int(0, 9)}`,
@@ -129,8 +162,8 @@ export function buildSeed() {
   const compras = [];
   const compras_items = [];
   const compras_entregas = [];
-  for (let i = 0; i < 34; i++) {
-    const month = Math.min(9, Math.floor(i / 3.4));
+  for (let i = 0; i < opts.nCompras; i++) {
+    const month = Math.min(9, Math.floor(i / (opts.nCompras / 10)));
     const estado = month < 6 ? pick(['CERRADA', 'CERRADA', 'RECIBIDA', 'ANULADA', 'CERRADA']) : pick(estadosOC);
     const c = {
       id: id('oc'), codigo: `OC-${String(i + 1).padStart(4, '0')}`, fecha: iso(2026, month, int(1, 27)),
@@ -167,7 +200,7 @@ export function buildSeed() {
   const firmas = [];
   const firmas_firmantes = [];
   const firmas_adjuntos = [];
-  docs.forEach(([titulo, tipo], i) => {
+  docs.slice(0, opts.nDocs).forEach(([titulo, tipo], i) => {
     const f = {
       id: id('doc'), codigo: `DOC-${String(i + 1).padStart(4, '0')}`, titulo, tipo, tercero_id: pick(terceros).id,
       fecha_limite: iso(2026, int(8, 11), int(1, 27)), descripcion: '', estado: estDoc[i], creado: iso(2026, int(3, 9), int(1, 27)),
@@ -201,7 +234,7 @@ export function buildSeed() {
   const actividades = [];
   const actividades_tareas = [];
   const actividades_tiempos = [];
-  acts.forEach(([titulo, area], i) => {
+  acts.slice(0, opts.nActs).forEach(([titulo, area], i) => {
     const m = int(6, 10);
     const a = {
       id: id('act'), codigo: `ACT-${String(i + 1).padStart(4, '0')}`, titulo, area, responsable: pick(responsables),
@@ -359,21 +392,21 @@ export function buildSeed() {
   });
 
   // Sesiones
-  usuarios.forEach((u) => {
+  (opts.primary ? usuarios : []).forEach((u) => {
     for (let k = 0; k < 9; k++) {
       const d = new Date(Date.UTC(2026, int(1, 9), int(1, 27), int(12, 15), int(0, 59)));
       pushLog(d, u, 'LOGIN', 'sesion', '', null, 'Inició sesión');
       pushLog(new Date(d.getTime() + int(2, 8) * 3_600_000), u, 'LOGOUT', 'sesion', '', null, 'Cerró sesión');
     }
   });
-  [['jperez', 3], ['administrador', 5], ['admin', 8]].forEach(([typed, mes]) =>
+  (opts.primary ? [['jperez', 3], ['administrador', 5], ['admin', 8]] : []).forEach(([typed, mes]) =>
     pushLog(Date.UTC(2026, mes, int(1, 27), int(13, 22), int(0, 59)), { id: '', nombre: '(desconocido)', usuario: typed, rol_id: null }, 'LOGIN_FALLIDO', 'sesion', '', null, `Intento de ingreso fallido con el usuario "${typed}"`, [], 'critical'),
   );
 
   // Ediciones y eliminaciones
   const rolCompras = roles[1];
-  pushLog(Date.UTC(2026, 2, 12, 15, 10), admin, 'EDITAR', 'roles', 'roles', rolCompras, `Editó rol ${rolCompras.codigo}`, [['permisos', 'compras: ver', 'compras: ver, crear, editar']]);
-  pushLog(Date.UTC(2026, 4, 20, 14, 5), admin, 'EDITAR', 'usuarios', 'usuarios', usuarios[2], `Editó usuario ${usuarios[2].codigo}`, [['cargo', 'Analista financiero', usuarios[2].cargo], ['clave', '••••••', '••••••']]);
+  if (opts.primary) pushLog(Date.UTC(2026, 2, 12, 15, 10), admin, 'EDITAR', 'roles', 'roles', rolCompras, `Editó rol ${rolCompras.codigo}`, [['permisos', 'compras: ver', 'compras: ver, crear, editar']]);
+  if (opts.primary) pushLog(Date.UTC(2026, 4, 20, 14, 5), admin, 'EDITAR', 'usuarios', 'usuarios', usuarios[2], `Editó usuario ${usuarios[2].codigo}`, [['cargo', 'Analista financiero', usuarios[2].cargo], ['clave', '••••••', '••••••']]);
   pushLog(Date.UTC(2026, 5, 3, 16, 40), byName('Laura Gómez'), 'EDITAR', 'terceros', 'terceros', terceros[3], `Editó tercero ${terceros[3].codigo}`, [['telefono', '+57 601 000 0000', terceros[3].telefono]]);
   pushLog(Date.UTC(2026, 6, 15, 13, 30), byName('Andrea Mejía'), 'EDITAR', 'actividades', 'actividades', actividades[1], `Editó actividad ${actividades[1].codigo}`, [['prioridad', 'Media', actividades[1].prioridad]]);
   pushLog(Date.UTC(2026, 6, 28, 17, 2), admin, 'ELIMINAR', 'compras', 'compras_items', { id: '', codigo: `${compras[6].codigo} › Resma papel carta` }, `Eliminó ítem de compra ${compras[6].codigo} › Resma papel carta`, [['descripcion', 'Resma papel carta', ''], ['cantidad', '5', '']], 'critical');
@@ -383,10 +416,18 @@ export function buildSeed() {
   auditoria_logs.sort((a, b) => a.fecha.localeCompare(b.fecha));
   auditoria_logs.forEach((l, i) => (l.codigo = `LOG-${String(i + 1).padStart(4, '0')}`));
 
-  return {
+  const tables = {
     roles, usuarios, terceros, terceros_contactos, terceros_direcciones, terceros_cuentas,
     compras, compras_items, compras_entregas, firmas, firmas_firmantes, firmas_adjuntos,
     actividades, actividades_tareas, actividades_tiempos,
     articulos, inventario, inventario_lineas, auditoria_logs, auditoria_logs_cambios, workflow_historial,
   };
+  // Cada registro de negocio pertenece a la empresa; los eventos de sesión/roles/usuarios son globales.
+  Object.entries(tables).forEach(([name, rows]) => {
+    if (name === 'roles' || name === 'usuarios') return;
+    rows.forEach((row) => {
+      row.empresa_id = name === 'auditoria_logs' && (row.modulo === 'sesion' || ['roles', 'usuarios'].includes(row.tabla)) ? '' : empresa.id;
+    });
+  });
+  return tables;
 }
