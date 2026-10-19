@@ -14,19 +14,19 @@ import { Button, Card, Empty, FormModal, IconButton, StatusBadge, Tabs, fmtDate,
  * Página genérica Maestro → Detalle dirigida por configuración.
  * Ver src/modules/compras/Compras.jsx como ejemplo completo de `config`.
  */
-export default function MasterDetailPage({ config }) {
+export default function MasterDetailPage({ config, embedded = false }) {
   const [params, setParams] = useSearchParams();
   const selectedId = params.get('id');
   const open = (id) => setParams(id ? { id } : {});
   return selectedId ? (
     <RecordView config={config} id={selectedId} onBack={() => open(null)} />
   ) : (
-    <ListView config={config} onOpen={open} />
+    <ListView config={config} onOpen={open} embedded={embedded} />
   );
 }
 
 // ======================= LISTA / KANBAN =======================
-function ListView({ config, onOpen }) {
+function ListView({ config, onOpen, embedded }) {
   const { can, user } = useAuth();
   const { toast, confirm } = useUi();
   const rows = useDb((d) => d.list(config.table), [config.table]);
@@ -70,14 +70,16 @@ function ListView({ config, onOpen }) {
   const pendingCount = useDb(() => pendingFor(can).filter((p) => p.module === config.module).length, [can, config.module]);
 
   return (
-    <div className="page">
-      <PageHeader config={config}>
-        {can(config.module, 'crear') && (
-          <Button icon={Plus} onClick={() => setCreating(true)}>
-            {config.newLabel}
-          </Button>
-        )}
-      </PageHeader>
+    <div className={embedded ? 'embedded' : 'page'}>
+      {!embedded && (
+        <PageHeader config={config}>
+          {can(config.module, 'crear') && (
+            <Button icon={Plus} onClick={() => setCreating(true)}>
+              {config.newLabel}
+            </Button>
+          )}
+        </PageHeader>
+      )}
 
       {kpis.length > 0 && (
         <div className="kpi-row">
@@ -122,6 +124,11 @@ function ListView({ config, onOpen }) {
           </button>
         </div>
         <span className="muted small">{filtered.length} registros</span>
+        {embedded && can(config.module, 'crear') && (
+          <Button icon={Plus} onClick={() => setCreating(true)} className="push-right">
+            {config.newLabel}
+          </Button>
+        )}
       </div>
 
       {view === 'proceso' ? (

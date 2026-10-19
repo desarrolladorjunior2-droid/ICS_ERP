@@ -9,6 +9,8 @@ import Compras from './modules/compras/Compras';
 import Firmas from './modules/firmas/Firmas';
 import Actividades from './modules/actividades/Actividades';
 import Terceros from './modules/terceros/Terceros';
+import Inventario from './modules/inventario/Inventario';
+import Auditorias from './modules/auditorias/Auditorias';
 import Usuarios from './modules/seguridad/Usuarios';
 import Roles from './modules/seguridad/Roles';
 
@@ -18,6 +20,8 @@ const PAGES = {
   firmas: Firmas,
   actividades: Actividades,
   terceros: Terceros,
+  inventario: Inventario,
+  auditorias: Auditorias,
   usuarios: Usuarios,
   roles: Roles,
 };

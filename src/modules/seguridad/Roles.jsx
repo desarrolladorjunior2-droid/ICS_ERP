@@ -21,6 +21,7 @@ export default function Roles() {
 
   const toggle = (mod, act) => {
     const base = structuredClone(perms);
+    base[mod] ??= {};
     base[mod][act] = !base[mod][act];
     if (act !== 'ver' && base[mod][act]) base[mod].ver = true; // cualquier acción implica lectura
     if (act === 'ver' && !base[mod].ver) ACTIONS.forEach((a) => (base[mod][a.key] = false));
@@ -28,6 +29,7 @@ export default function Roles() {
   };
   const toggleRow = (mod) => {
     const base = structuredClone(perms);
+    base[mod] ??= {};
     const all = ACTIONS.every((a) => base[mod][a.key]);
     ACTIONS.forEach((a) => (base[mod][a.key] = !all));
     setDraft({ id: sel.id, permisos: base });

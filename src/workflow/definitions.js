@@ -82,4 +82,18 @@ export const WORKFLOWS = {
       { from: ['BLOQUEADO'], to: 'ACTIVO', label: 'Desbloquear', perm: 'aprobar', comment: true },
     ],
   },
+
+  inventario: {
+    initial: 'BORRADOR',
+    states: {
+      BORRADOR: { label: 'Borrador', tone: 'neutral', editable: true },
+      CONFIRMADO: { label: 'Confirmado', tone: 'good', final: true },
+      ANULADO: { label: 'Anulado', tone: 'muted', final: true },
+    },
+    flow: ['BORRADOR', 'CONFIRMADO'],
+    transitions: [
+      { from: ['BORRADOR'], to: 'CONFIRMADO', label: 'Confirmar movimiento', perm: 'aprobar', guard: 'puedeConfirmar' },
+      { from: ['BORRADOR', 'CONFIRMADO'], to: 'ANULADO', label: 'Anular', perm: 'eliminar', comment: true, danger: true, guard: 'anulacionSegura' },
+    ],
+  },
 };

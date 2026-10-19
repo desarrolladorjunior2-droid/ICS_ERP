@@ -1,9 +1,19 @@
 import { ShoppingCart, Package, Truck } from 'lucide-react';
 import MasterDetailPage from '../../components/MasterDetailPage';
-import { fmtDate, fmtMoney, fmtCompact } from '../../components/ui';
-import { compraTotales, itemSubtotal, itemTotal, terceroName, terceroOptions } from '../../data/lookups';
+import { fmtDate, fmtMoney, fmtCompact, Tag } from '../../components/ui';
+import { db } from '../../data/db';
+import { articuloOptions, compraTotales, itemSubtotal, itemTotal, terceroName, terceroOptions } from '../../data/lookups';
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** Estado del ingreso de la orden al inventario (relación Compras → Inventario). */
+function ingresoInventario(compra) {
+  const movs = db.list('inventario', (m) => m.compra_id === compra.id && m.estado !== 'ANULADO');
+  if (movs.some((m) => m.estado === 'CONFIRMADO')) return `Ingresado · ${movs.find((m) => m.estado === 'CONFIRMADO').codigo}`;
+  if (movs.length) return `Pendiente · ${movs[0].codigo}`;
+  const aplica = db.details('compras', compra.id, 'compras_items').some((i) => i.articulo_id);
+  return aplica ? 'Al recibir la orden' : 'No aplica';
+}
 
 export const comprasConfig = {
   module: 'compras',
@@ -58,6 +68,7 @@ export const comprasConfig = {
       { label: 'Subtotal', value: fmtMoney(t.subtotal, r.moneda) },
       { label: 'IVA', value: fmtMoney(t.iva, r.moneda) },
       { label: 'Total', value: fmtMoney(t.total, r.moneda), highlight: true },
+      { label: 'Ingreso a inventario', value: ingresoInventario(r) },
     ];
   },
 
@@ -69,6 +80,14 @@ export const comprasConfig = {
       label: 'Ítems',
       icon: Package,
       fields: [
+        {
+          key: 'articulo_id', label: 'Artículo de inventario (opcional: al recibir la orden ingresa al stock)', type: 'select',
+          options: articuloOptions, span: 3,
+          onChange: (v) => {
+            const a = db.get('articulos', v);
+            return a ? { descripcion: a.nombre, unidad: a.unidad, precio_unitario: a.ultimo_costo } : {};
+          },
+        },
         { key: 'descripcion', label: 'Descripción', required: true, span: 3 },
         { key: 'cantidad', label: 'Cantidad', type: 'number', required: true, min: 1 },
         { key: 'unidad', label: 'Unidad', type: 'select', options: ['UND', 'HRS', 'MES', 'PAQ', 'SRV'], required: true },
@@ -76,7 +95,15 @@ export const comprasConfig = {
         { key: 'iva', label: 'IVA %', type: 'select', options: [{ value: 0, label: '0%' }, { value: 5, label: '5%' }, { value: 19, label: '19%' }], default: 19, required: true },
       ],
       columns: [
-        { key: 'descripcion', label: 'Descripción' },
+        {
+          key: 'descripcion', label: 'Descripción',
+          render: (i) => (
+            <>
+              {i.descripcion}
+              {i.articulo_id && <Tag tone="accent"> {db.get('articulos', i.articulo_id)?.codigo || 'Inventario'}</Tag>}
+            </>
+          ),
+        },
         { key: 'cantidad', label: 'Cant.', align: 'right' },
         { key: 'unidad', label: 'Und.' },
         { key: 'precio_unitario', label: 'Precio unit.', align: 'right', render: (i) => fmtMoney(i.precio_unitario) },

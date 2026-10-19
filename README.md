@@ -10,6 +10,8 @@ ERP de **ICS – Innovation Code Services**, construido en React + Vite y listo 
 | Firmas | Documento | Firmantes (firma manuscrita secuencial), Adjuntos | Borrador → En firma → Firmado (+ Rechazado / Vencido) |
 | Actividades | Actividad | Tareas, Registro de tiempos | Planeada → En curso → En revisión → Completada (+ Cancelada) |
 | Terceros | Tercero | Contactos, Direcciones, Cuentas bancarias | Prospecto → En validación → Activo (+ Inactivo / Bloqueado) |
+| Inventario | Movimiento (y catálogo de artículos) | Líneas por artículo | Borrador → Confirmado (+ Anulado) |
+| Auditoría | Evento (log) | Cambios campo a campo (anterior → nuevo) | — (solo lectura, inmutable) |
 | Usuarios / Roles | Usuario, Rol | Dashboards por usuario; matriz CRUD + Aprobar por módulo | — |
 
 **El workflow no es un módulo: es la metodología de trabajo de todos los módulos.** Cada módulo de gestión incluye:
@@ -18,6 +20,10 @@ ERP de **ICS – Innovation Code Services**, construido en React + Vite y listo 
 - Bandeja **Por aprobar** al inicio de la lista del módulo.
 - Vistas **Tabla**, **Flujo** (tablero para arrastrar entre estados) y **Proceso** (mapa de estados, transiciones y bitácora).
 - Historial de movimientos en cada registro y sección **Flujo de trabajo** en los dashboards.
+
+**Compras ⇄ Inventario.** Los ítems de una orden de compra pueden ligarse a un artículo del inventario. Al ejecutar *Registrar recepción*, el sistema genera automáticamente un movimiento de **Entrada por compra** en borrador con las cantidades y costos de la orden; el almacén lo confirma (ahí se actualizan las existencias y el último costo del artículo). Las salidas no pueden dejar el stock en negativo, y la orden muestra el estado de su ingreso (*Al recibir la orden / Pendiente / Ingresado*).
+
+**Auditoría (logs).** Toda creación, edición, eliminación y cambio de estado, además de inicios y cierres de sesión (incluidos los intentos fallidos), queda registrada automáticamente con usuario, rol, fecha y los valores anterior y nuevo de cada campo. El módulo es de solo lectura, permite filtrar por usuario, módulo, acción y fechas, y exportar a CSV. Las contraseñas nunca se guardan en el log. En el DEMO se conservan los últimos 1.500 eventos.
 
 - **Navegación en rueda** a la izquierda: gira con la rueda del ratón, las flechas o el teclado (↑ ↓); en móvil se convierte en una barra inferior.
 - **Primera vista = dashboard parametrizado** del usuario (en *Usuarios → Dashboards de inicio*). El rol Administrador ve todos.
@@ -32,6 +38,7 @@ ERP de **ICS – Innovation Code Services**, construido en React + Vite y listo 
 | `lgomez` | `Demo2026*` | Analista de compras |
 | `crojas` | `Demo2026*` | Aprobador |
 | `amejia` | `Demo2026*` | Líder de proyectos |
+| `rvargas` | `Demo2026*` | Auditor interno |
 
 El botón ↺ de la barra superior (solo administrador) restaura los datos de demostración.
 

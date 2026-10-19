@@ -1,5 +1,15 @@
 import { db } from '../data/db';
+import { articuloName, signedQty, stockMap } from '../data/lookups';
 import { WORKFLOWS } from './definitions';
+
+/** Efecto neto de un movimiento de inventario sobre el stock, por artículo. */
+function movimientoDeltas(rec) {
+  const out = {};
+  db.details('inventario', rec.id, 'inventario_lineas').forEach((l) => {
+    out[l.articulo_id] = (out[l.articulo_id] || 0) + signedQty(rec.tipo, l.cantidad);
+  });
+  return out;
+}
 
 // Guardas: reglas de negocio que deben cumplirse antes de una transición.
 const GUARDS = {
@@ -10,6 +20,24 @@ const GUARDS = {
   todosFirmaron: (rec) =>
     db.details('firmas', rec.id, 'firmas_firmantes').every((f) => f.estado === 'FIRMADO') ||
     'Faltan firmantes por firmar.',
+  // Inventario: no se confirma un movimiento vacío ni que deje el stock en negativo.
+  puedeConfirmar: (rec) => {
+    if (!db.details('inventario', rec.id, 'inventario_lineas').length) return 'El movimiento debe tener al menos una línea.';
+    const stock = stockMap();
+    for (const [art, d] of Object.entries(movimientoDeltas(rec))) {
+      if ((stock[art] || 0) + d < 0) return `Stock insuficiente de "${articuloName(art)}" (disponible: ${stock[art] || 0}).`;
+    }
+    return true;
+  },
+  // Anular un movimiento ya confirmado revierte su efecto: no puede dejar stock negativo.
+  anulacionSegura: (rec) => {
+    if (rec.estado !== 'CONFIRMADO') return true;
+    const stock = stockMap();
+    for (const [art, d] of Object.entries(movimientoDeltas(rec))) {
+      if ((stock[art] || 0) - d < 0) return `No se puede anular: dejaría el stock de "${articuloName(art)}" en negativo.`;
+    }
+    return true;
+  },
 };
 
 // Efectos automáticos al entrar a un estado ("modulo:ESTADO").
@@ -19,9 +47,53 @@ const EFFECTS = {
     db.details('firmas', rec.id, 'firmas_firmantes')
       .filter((f) => f.estado === 'RECHAZADO')
       .forEach((f) => db.update('firmas_firmantes', f.id, { estado: 'PENDIENTE', firma: '', fecha_firma: '' })),
+
+  // INVENTARIO ⇄ COMPRAS: al recibir una orden, sus ítems ligados a un artículo generan
+  // un ingreso en borrador que el almacén debe confirmar.
+  'compras:RECIBIDA': (rec, user) => {
+    const items = db.details('compras', rec.id, 'compras_items').filter((i) => i.articulo_id);
+    if (!items.length || db.list('inventario', (m) => m.compra_id === rec.id && m.estado !== 'ANULADO').length) return;
+    const mov = db.insert('inventario', {
+      tipo: 'Entrada por compra',
+      fecha: new Date().toISOString().slice(0, 10),
+      bodega: 'Bodega principal',
+      compra_id: rec.id,
+      referencia: rec.codigo,
+      observaciones: 'Generado automáticamente al recibir la orden de compra',
+      estado: 'BORRADOR',
+    });
+    items.forEach((i) =>
+      db.insert('inventario_lineas', {
+        movimiento_id: mov.id,
+        articulo_id: i.articulo_id,
+        cantidad: i.cantidad,
+        costo_unitario: i.precio_unitario,
+      }),
+    );
+    db.insert('workflow_historial', {
+      modulo: 'inventario',
+      registro_id: mov.id,
+      registro_codigo: mov.codigo,
+      desde: '',
+      hacia: 'BORRADOR',
+      accion: `Creado automáticamente desde ${rec.codigo}`,
+      usuario_id: user.id,
+      usuario: user.nombre,
+      comentario: '',
+      fecha: new Date().toISOString(),
+    });
+  },
+
+  // Al confirmar una entrada por compra se actualiza el último costo del artículo.
+  'inventario:CONFIRMADO': (rec) => {
+    if (rec.tipo !== 'Entrada por compra') return;
+    db.details('inventario', rec.id, 'inventario_lineas').forEach((l) => {
+      if (Number(l.costo_unitario) > 0) db.update('articulos', l.articulo_id, { ultimo_costo: Number(l.costo_unitario) });
+    });
+  },
 };
 
-export const stateInfo =(module, estado) =>
+export const stateInfo = (module, estado) =>
   WORKFLOWS[module]?.states[estado] || { label: estado || '—', tone: 'neutral' };
 
 export const isEditable = (module, rec) => !rec || !!stateInfo(module, rec.estado).editable;
@@ -40,7 +112,7 @@ export function runTransition(module, table, rec, transition, user, comentario =
     if (res !== true) return { ok: false, error: res };
   }
   db.update(table, rec.id, { estado: transition.to });
-  EFFECTS[`${module}:${transition.to}`]?.(rec);
+  EFFECTS[`${module}:${transition.to}`]?.(rec, user);
   db.insert('workflow_historial', {
     modulo: module,
     registro_id: rec.id,
@@ -72,5 +144,6 @@ export function pendingFor(can) {
   push('firmas', 'firmas', db.list('firmas', (r) => r.estado === 'EN_FIRMA'));
   push('actividades', 'actividades', db.list('actividades', (r) => r.estado === 'EN_REVISION'));
   push('terceros', 'terceros', db.list('terceros', (r) => r.estado === 'EN_VALIDACION'));
+  push('inventario', 'inventario', db.list('inventario', (r) => r.estado === 'BORRADOR'));
   return pending;
 }

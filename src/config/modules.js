@@ -4,6 +4,8 @@ import {
   PenTool,
   ListChecks,
   Users2,
+  Warehouse,
+  ScrollText,
   UserCog,
   ShieldCheck,
 } from 'lucide-react';
@@ -13,9 +15,11 @@ import {
 export const MODULES = [
   { key: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, group: 'Inicio' },
   { key: 'compras', label: 'Compras', path: '/compras', icon: ShoppingCart, group: 'Gestión' },
+  { key: 'inventario', label: 'Inventario', path: '/inventario', icon: Warehouse, group: 'Gestión' },
   { key: 'firmas', label: 'Firmas', path: '/firmas', icon: PenTool, group: 'Gestión' },
   { key: 'actividades', label: 'Actividades', path: '/actividades', icon: ListChecks, group: 'Gestión' },
   { key: 'terceros', label: 'Terceros', path: '/terceros', icon: Users2, group: 'Gestión' },
+  { key: 'auditorias', label: 'Auditoría', path: '/auditorias', icon: ScrollText, group: 'Seguridad' },
   { key: 'usuarios', label: 'Usuarios', path: '/usuarios', icon: UserCog, group: 'Seguridad' },
   { key: 'roles', label: 'Roles y permisos', short: 'Roles', path: '/roles', icon: ShieldCheck, group: 'Seguridad' },
 ];
@@ -36,6 +40,8 @@ export const DASHBOARDS = [
   { key: 'firmas', label: 'Firmas', module: 'firmas' },
   { key: 'actividades', label: 'Actividades', module: 'actividades' },
   { key: 'terceros', label: 'Terceros', module: 'terceros' },
+  { key: 'inventario', label: 'Inventario', module: 'inventario' },
+  { key: 'auditorias', label: 'Auditoría', module: 'auditorias' },
 ];
 
 export const fullPermissions = () =>

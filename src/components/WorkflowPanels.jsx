@@ -12,7 +12,8 @@ import { Button, Card, Empty, StatusBadge, fmtDateTime, useUi } from './ui';
 // Piezas de la metodología Workflow que viven DENTRO de cada módulo
 // (el workflow no es un módulo: es la forma de trabajar de todos).
 
-const recordLabel = (r) => r.titulo || r.razon_social || (r.proveedor_id ? `Orden · ${terceroName(r.proveedor_id)}` : r.codigo);
+const recordLabel = (r) =>
+  r.titulo || r.razon_social || (r.proveedor_id ? `Orden · ${terceroName(r.proveedor_id)}` : r.tipo ? `${r.tipo}${r.referencia ? ` · ${r.referencia}` : ''}` : r.codigo);
 
 /** Registros que esperan una acción de aprobación del usuario. `module` filtra a un solo módulo. */
 export function PendingList({ module, limit }) {

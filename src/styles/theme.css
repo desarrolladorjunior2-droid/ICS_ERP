@@ -54,6 +54,7 @@
 
   /* Tonos de insignias de estado */
   --tone-neutral: #8fa3cc;
+  --tone-warning: #fab219;
   --tone-info: #22c8f0;
   --tone-accent: #6f9bff;
   --tone-good: #2fcf6f;
@@ -90,6 +91,7 @@
   --series-5: #e87ba4;
 
   --tone-neutral: #5a6b91;
+  --tone-warning: #b36b00;
   --tone-info: #0c85b8;
   --tone-accent: #1a5be6;
   --tone-good: #13863f;

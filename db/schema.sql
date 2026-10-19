@@ -182,6 +182,81 @@ CREATE TABLE actividades_tiempos (
   nota          TEXT
 );
 
+-- ---------- Inventario (relacionado con Compras) ----------
+CREATE TABLE articulos (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo        VARCHAR(20) UNIQUE NOT NULL,
+  nombre        VARCHAR(160) NOT NULL,
+  categoria     VARCHAR(60) NOT NULL,
+  unidad        VARCHAR(10) NOT NULL,
+  stock_minimo  NUMERIC(14,2) NOT NULL DEFAULT 0,
+  ultimo_costo  NUMERIC(16,2) NOT NULL DEFAULT 0,
+  activo        BOOLEAN NOT NULL DEFAULT TRUE,
+  creado        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Los ítems de compra pueden ligarse a un artículo: al recibir la orden se genera el ingreso
+ALTER TABLE compras_items ADD COLUMN articulo_id UUID REFERENCES articulos(id);
+
+CREATE TABLE inventario (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo         VARCHAR(20) UNIQUE NOT NULL,
+  tipo           VARCHAR(20) NOT NULL CHECK (tipo IN ('Entrada por compra','Entrada','Salida','Ajuste')),
+  fecha          DATE NOT NULL,
+  bodega         VARCHAR(60) NOT NULL,
+  compra_id      UUID REFERENCES compras(id),      -- orden de origen (entradas por compra)
+  referencia     VARCHAR(80),
+  observaciones  TEXT,
+  estado         VARCHAR(20) NOT NULL DEFAULT 'BORRADOR',
+  creado         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE inventario_lineas (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  movimiento_id   UUID NOT NULL REFERENCES inventario(id) ON DELETE CASCADE,
+  articulo_id     UUID NOT NULL REFERENCES articulos(id),
+  cantidad        NUMERIC(14,2) NOT NULL,           -- en ajustes puede ser negativa
+  costo_unitario  NUMERIC(16,2) NOT NULL DEFAULT 0
+);
+-- Existencias = suma de líneas de movimientos CONFIRMADOS (salidas restan)
+CREATE VIEW existencias AS
+SELECT a.id AS articulo_id, a.codigo, a.nombre, a.stock_minimo,
+       COALESCE(SUM(CASE WHEN m.tipo = 'Salida' THEN -l.cantidad ELSE l.cantidad END), 0) AS stock
+FROM articulos a
+LEFT JOIN inventario_lineas l ON l.articulo_id = a.id
+LEFT JOIN inventario m ON m.id = l.movimiento_id AND m.estado = 'CONFIRMADO'
+GROUP BY a.id;
+
+-- ---------- Auditoría: registro de actividad (solo inserción; sin UPDATE/DELETE) ----------
+CREATE TABLE auditoria_logs (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo           VARCHAR(20) UNIQUE NOT NULL,
+  fecha            TIMESTAMPTZ NOT NULL DEFAULT now(),
+  usuario_id       UUID REFERENCES usuarios(id),
+  usuario          VARCHAR(120) NOT NULL,
+  usuario_login    VARCHAR(60),
+  rol              VARCHAR(80),
+  accion           VARCHAR(20) NOT NULL
+                   CHECK (accion IN ('CREAR','EDITAR','ELIMINAR','WORKFLOW','LOGIN','LOGOUT','LOGIN_FALLIDO')),
+  modulo           VARCHAR(30) NOT NULL,
+  tabla            VARCHAR(60),
+  registro_id      UUID,
+  registro_codigo  VARCHAR(120),
+  descripcion      TEXT NOT NULL,
+  nivel            VARCHAR(10) NOT NULL DEFAULT 'info'
+);
+CREATE INDEX ix_audit_fecha ON auditoria_logs (fecha DESC);
+CREATE INDEX ix_audit_usuario ON auditoria_logs (usuario_id, fecha DESC);
+CREATE INDEX ix_audit_registro ON auditoria_logs (tabla, registro_id);
+CREATE TABLE auditoria_logs_cambios (
+  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  log_id    UUID NOT NULL REFERENCES auditoria_logs(id) ON DELETE CASCADE,
+  campo     VARCHAR(60) NOT NULL,
+  anterior  TEXT,
+  nuevo     TEXT
+);
+-- Inmutabilidad: el rol de la aplicación solo debe tener permiso INSERT/SELECT
+-- REVOKE UPDATE, DELETE ON auditoria_logs, auditoria_logs_cambios FROM app_user;
+
 -- ---------- Workflow: bitácora transversal ----------
 CREATE TABLE workflow_historial (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),

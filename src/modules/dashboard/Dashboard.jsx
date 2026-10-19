@@ -2,13 +2,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, AreaChart, Area, LabelList,
 } from 'recharts';
-import { LayoutDashboard, ShoppingCart, PenTool, ListChecks, Users2, Workflow, TrendingUp, Filter, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, PenTool, ListChecks, Users2, Workflow, TrendingUp, Filter, ChevronDown, Warehouse, ScrollText } from 'lucide-react';
 import { useDb } from '../../data/db';
 import { useAuth } from '../../auth/AuthContext';
 import { DASHBOARDS } from '../../config/modules';
-import { compraTotales, avanceActividad, terceroName } from '../../data/lookups';
+import { compraTotales, avanceActividad, terceroName, stockMap, movimientoValor } from '../../data/lookups';
 import { WORKFLOWS } from '../../workflow/definitions';
-import { Card, Empty, fmtCompact, fmtDate, fmtMoney, Progress, StatusBadge } from '../../components/ui';
+import { Card, Empty, fmtCompact, fmtDate, fmtDateTime, fmtMoney, Progress, StatusBadge, Tag } from '../../components/ui';
 import { PendingList } from '../../components/WorkflowPanels';
 import { pendingFor } from '../../workflow/engine';
 
@@ -71,6 +71,10 @@ function ResumenWidget() {
       enFirma: d.list('firmas', (f) => f.estado === 'EN_FIRMA').length,
       actAbiertas: d.list('actividades', (a) => ['PLANEADA', 'EN_CURSO', 'EN_REVISION'].includes(a.estado)).length,
       tercerosActivos: d.list('terceros', (t) => t.estado === 'ACTIVO').length,
+      bajoMinimo: (() => {
+        const st = stockMap();
+        return d.list('articulos', (a) => a.activo !== false && (st[a.id] || 0) < a.stock_minimo).length;
+      })(),
     };
   });
   return (
@@ -82,6 +86,7 @@ function ResumenWidget() {
         <StatTile icon={PenTool} label="Documentos en firma" value={data.enFirma} hint="esperando firmantes" onClick={() => navigate('/firmas')} />
         <StatTile icon={ListChecks} label="Actividades abiertas" value={data.actAbiertas} hint="planeadas, en curso o revisión" onClick={() => navigate('/actividades')} />
         <StatTile icon={Users2} label="Terceros activos" value={data.tercerosActivos} onClick={() => navigate('/terceros')} />
+        <StatTile icon={Warehouse} label="Artículos bajo mínimo" value={data.bajoMinimo} hint="reposición de inventario" onClick={() => navigate('/inventario')} />
       </div>
     </section>
   );
@@ -314,6 +319,195 @@ function TercerosWidget() {
   );
 }
 
+function InventarioWidget() {
+  const { valor, bajos, porMes, porCategoria, totales } = useDb((d) => {
+    const stock = stockMap();
+    const arts = d.list('articulos');
+    const valor = arts.reduce((s, a) => s + (stock[a.id] || 0) * a.ultimo_costo, 0);
+    const bajos = arts
+      .map((a) => ({ ...a, stock: stock[a.id] || 0 }))
+      .filter((a) => a.stock < a.stock_minimo)
+      .sort((x, y) => x.stock / x.stock_minimo - y.stock / y.stock);
+    const porMes = MESES.slice(0, 10).map((mes) => ({ mes, entradas: 0, salidas: 0 }));
+    const totales = { entradas: 0, salidas: 0 };
+    d.list('inventario', (m) => m.estado === 'CONFIRMADO').forEach((m) => {
+      const i = new Date(m.fecha).getUTCMonth();
+      const v = movimientoValor(m.id);
+      if (m.tipo === 'Salida') {
+        if (porMes[i]) porMes[i].salidas += v;
+        totales.salidas += v;
+      } else if (m.tipo !== 'Ajuste') {
+        if (porMes[i]) porMes[i].entradas += v;
+        totales.entradas += v;
+      }
+    });
+    const cat = {};
+    arts.forEach((a) => (cat[a.categoria] = (cat[a.categoria] || 0) + (stock[a.id] || 0) * a.ultimo_costo));
+    const porCategoria = Object.entries(cat)
+      .map(([nombre, v]) => ({ nombre, valor: v }))
+      .sort((a, b) => b.valor - a.valor);
+    return { valor, bajos, porMes, porCategoria, totales };
+  });
+  return (
+    <section className="dash-section">
+      <SectionTitle icon={Warehouse} title="Inventario" />
+      <div className="dash-grid">
+        <Card title="Entradas y salidas por mes" subtitle={`Valor movido · inventario valorizado en $${fmtCompact(valor)}`} className="span-2">
+          <Legend
+            items={[
+              { name: 'Entradas', color: 'var(--series-1)', value: `$${fmtCompact(totales.entradas)}` },
+              { name: 'Salidas', color: 'var(--series-2)', value: `$${fmtCompact(totales.salidas)}` },
+            ]}
+          />
+          <div className="chart">
+            <ResponsiveContainer width="100%" height={230}>
+              <BarChart data={porMes} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid {...GRID} />
+                <XAxis dataKey="mes" tick={AXIS} axisLine={{ stroke: 'var(--axis)' }} tickLine={false} />
+                <YAxis tick={AXIS} axisLine={false} tickLine={false} tickFormatter={(v) => fmtCompact(v)} width={48} />
+                <Tooltip cursor={{ fill: 'var(--hover)' }} content={<ChartTooltip format={(v) => fmtMoney(v)} />} />
+                <Bar dataKey="entradas" name="Entradas" fill="var(--series-1)" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="salidas" name="Salidas" fill="var(--series-2)" radius={[4, 4, 0, 0]} maxBarSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card title="Artículos bajo el mínimo" subtitle={`${bajos.length} requieren reposición`}>
+          {bajos.length ? (
+            <ul className="list">
+              {bajos.slice(0, 6).map((a) => (
+                <li key={a.id}>
+                  <span className="grow">{a.nombre}</span>
+                  <span className="muted small">
+                    {a.stock} / {a.stock_minimo} {a.unidad}
+                  </span>
+                  <Tag tone={a.stock <= 0 ? 'critical' : 'warning'}>{a.stock <= 0 ? 'Sin stock' : 'Bajo mínimo'}</Tag>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty title="Stock en niveles normales" />
+          )}
+        </Card>
+        <Card title="Valor del inventario por categoría" subtitle="Existencias × último costo" className="span-3">
+          <ul className="rank">
+            {porCategoria.map((c, i) => (
+              <li key={c.nombre}>
+                <span className="rank-n">{i + 1}</span>
+                <span className="rank-name">{c.nombre}</span>
+                <span className="rank-bar">
+                  <i style={{ width: `${porCategoria[0].valor ? (c.valor / porCategoria[0].valor) * 100 : 0}%` }} />
+                </span>
+                <b>${fmtCompact(c.valor)}</b>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
+
+function AuditoriaWidget() {
+  const { porMes, acciones, topUsuarios, criticos, total } = useDb((d) => {
+    const logs = d.list('auditoria_logs');
+    const colors = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)'];
+    const porMes = MESES.slice(0, 10).map((mes) => ({ mes, eventos: 0 }));
+    logs.forEach((l) => {
+      const i = new Date(l.fecha).getMonth();
+      if (porMes[i]) porMes[i].eventos += 1;
+    });
+    const grupos = [
+      ['Creación', ['CREAR']],
+      ['Edición', ['EDITAR']],
+      ['Flujo', ['WORKFLOW']],
+      ['Eliminación', ['ELIMINAR']],
+      ['Sesión', ['LOGIN', 'LOGOUT', 'LOGIN_FALLIDO']],
+    ];
+    const acciones = grupos
+      .map(([name, keys], i) => ({ name, value: logs.filter((l) => keys.includes(l.accion)).length, color: colors[i] }))
+      .filter((a) => a.value);
+    const u = {};
+    logs.filter((l) => l.usuario_id && l.usuario_id !== 'sistema' && !['LOGIN', 'LOGOUT'].includes(l.accion)).forEach((l) => (u[l.usuario] = (u[l.usuario] || 0) + 1));
+    const topUsuarios = Object.entries(u)
+      .map(([nombre, n]) => ({ nombre, n }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 5);
+    const criticos = logs.filter((l) => l.nivel === 'critical').sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 6);
+    return { porMes, acciones, topUsuarios, criticos, total: logs.length };
+  });
+  return (
+    <section className="dash-section">
+      <SectionTitle icon={ScrollText} title="Auditoría" />
+      <div className="dash-grid">
+        <Card title="Eventos por mes" subtitle={`${total} eventos registrados · 2026`} className="span-2">
+          <div className="chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={porMes} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid {...GRID} />
+                <XAxis dataKey="mes" tick={AXIS} axisLine={{ stroke: 'var(--axis)' }} tickLine={false} />
+                <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} width={36} />
+                <Tooltip cursor={{ fill: 'var(--hover)' }} content={<ChartTooltip />} />
+                <Bar dataKey="eventos" name="Eventos" fill="var(--series-1)" radius={[4, 4, 0, 0]} maxBarSize={34} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card title="Eventos por tipo de acción" subtitle={`${total} en total`}>
+          <div className="donut-wrap">
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie data={acciones} dataKey="value" nameKey="name" innerRadius={58} outerRadius={84} paddingAngle={2} stroke="var(--surface)" strokeWidth={2}>
+                  {acciones.map((a) => (
+                    <Cell key={a.name} fill={a.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<ChartTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="donut-center">
+              <strong>{total}</strong>
+              <span>eventos</span>
+            </div>
+          </div>
+          <Legend items={acciones} />
+        </Card>
+        <Card title="Usuarios con más cambios" subtitle="Creaciones, ediciones, flujo y eliminaciones">
+          <ul className="rank">
+            {topUsuarios.map((u, i) => (
+              <li key={u.nombre}>
+                <span className="rank-n">{i + 1}</span>
+                <span className="rank-name">{u.nombre}</span>
+                <span className="rank-bar">
+                  <i style={{ width: `${(u.n / topUsuarios[0].n) * 100}%` }} />
+                </span>
+                <b>{u.n}</b>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card title="Eventos críticos recientes" subtitle="Eliminaciones e ingresos fallidos" className="span-2">
+          {criticos.length ? (
+            <ul className="list">
+              {criticos.map((l) => (
+                <li key={l.id}>
+                  <Tag tone="critical">{l.accion === 'ELIMINAR' ? 'Eliminación' : 'Ingreso fallido'}</Tag>
+                  <span className="grow">{l.descripcion}</span>
+                  <span className="muted small">{l.usuario}</span>
+                  <span className="muted small">{fmtDateTime(l.fecha)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty title="Sin eventos críticos" />
+          )}
+        </Card>
+      </div>
+    </section>
+  );
+}
+
 /** Flujo de trabajo del dashboard: bandeja de aprobación (y actividad de flujo en el resumen). */
 function FlujoSection({ module }) {
   const { can } = useAuth();
@@ -374,6 +568,8 @@ const WIDGETS = {
   firmas: FirmasWidget,
   actividades: ActividadesWidget,
   terceros: TercerosWidget,
+  inventario: InventarioWidget,
+  auditorias: AuditoriaWidget,
 };
 
 const viewKey = (userId) => `ics-dashboard-${userId}`;

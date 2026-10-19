@@ -25,3 +25,34 @@ export function avanceActividad(actId) {
   const t = db.details('actividades', actId, 'actividades_tareas');
   return t.length ? (t.filter((x) => x.completada).length / t.length) * 100 : 0;
 }
+
+// ---------- Inventario ----------
+/** Efecto de una línea sobre el stock: entradas suman, salidas restan, ajustes llevan su propio signo. */
+export const signedQty = (tipo, cantidad) => (tipo === 'Salida' ? -1 : 1) * (Number(cantidad) || 0);
+
+/** Existencias por artículo: solo cuentan los movimientos CONFIRMADOS. */
+export function stockMap() {
+  const confirmados = new Map(db.list('inventario', (m) => m.estado === 'CONFIRMADO').map((m) => [m.id, m.tipo]));
+  const stock = {};
+  db.list('inventario_lineas').forEach((l) => {
+    const tipo = confirmados.get(l.movimiento_id);
+    if (tipo) stock[l.articulo_id] = (stock[l.articulo_id] || 0) + signedQty(tipo, l.cantidad);
+  });
+  return stock;
+}
+
+export const articuloOptions = () =>
+  db.list('articulos', (a) => a.activo !== false).map((a) => ({ value: a.id, label: `${a.codigo} · ${a.nombre}` }));
+
+export const articuloName = (id) => db.get('articulos', id)?.nombre || '—';
+
+export const compraLabel = (id) => {
+  const c = db.get('compras', id);
+  return c ? `${c.codigo} · ${terceroName(c.proveedor_id)}` : '—';
+};
+
+/** Valor del movimiento = suma de cantidad × costo de sus líneas. */
+export const movimientoValor = (movId) =>
+  db
+    .details('inventario', movId, 'inventario_lineas')
+    .reduce((s, l) => s + Math.abs(Number(l.cantidad) || 0) * (Number(l.costo_unitario) || 0), 0);

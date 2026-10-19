@@ -53,6 +53,21 @@ export const SCHEMA = {
   actividades_tareas: {},
   actividades_tiempos: {},
 
+  // ---- Inventario (relacionado con Compras) ----
+  articulos: { prefix: 'ART' },
+  inventario: {
+    prefix: 'MOV',
+    details: { inventario_lineas: 'movimiento_id' },
+  },
+  inventario_lineas: {},
+
+  // ---- Auditoría: registro de actividad del sistema (solo lectura) ----
+  auditoria_logs: {
+    prefix: 'LOG',
+    details: { auditoria_logs_cambios: 'log_id' },
+  },
+  auditoria_logs_cambios: {},
+
   // ---- Workflow (bitácora transversal) ----
   workflow_historial: {},
 };

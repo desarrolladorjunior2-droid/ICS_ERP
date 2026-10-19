@@ -66,6 +66,7 @@ export default function Layout() {
   const resetDemo = async () => {
     if (await confirm('Se restaurarán todos los datos de demostración. ¿Continuar?', { title: 'Restaurar DEMO', danger: true })) {
       db.reset();
+      db.logEvent('EDITAR', 'Restauró los datos de demostración', { modulo: 'sistema' });
       toast('Datos de demostración restaurados');
     }
   };

@@ -228,7 +228,7 @@ export function FormModal({ title, fields, initial, onSubmit, onClose, submitLab
     >
       <form id="crud-form" className="form-grid" onSubmit={submit} noValidate>
         {fields.map((f) => (
-          <Field key={f.key} field={f} value={data[f.key]} error={errors[f.key]} onChange={(v) => setData((d) => ({ ...d, [f.key]: v }))} />
+          <Field key={f.key} field={f} value={data[f.key]} error={errors[f.key]} onChange={(v) => setData((d) => ({ ...d, [f.key]: v, ...(f.onChange?.(v, d) || {}) }))} />
         ))}
       </form>
     </Modal>
